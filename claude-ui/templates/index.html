@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" id="hljs-dark" disabled>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal-overlay" id="shortcutsModal" style="display: none;" onclick="closeShortcutsModal(event)">
+        <div class="modal" style="max-width: 500px;">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcuts-list">
+                <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>K</kbd><span>Search conversations</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>N</kbd><span>New chat</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>,</kbd><span>Open settings</span></div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>L</kbd><span>Toggle theme</span></div>
+                <div class="shortcut-item"><kbd>Enter</kbd><span>Send message</span></div>
+                <div class="shortcut-item"><kbd>Shift</kbd> + <kbd>Enter</kbd><span>New line</span></div>
+                <div class="shortcut-item"><kbd>Esc</kbd><span>Close modal/cancel</span></div>
+                <div class="shortcut-item"><kbd>?</kbd><span>Show this help</span></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="closeShortcutsModal()">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="createNewChat()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    New Chat
+                    <span class="shortcut-hint">Ctrl+N</span>
+                </button>
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search conversations..." oninput="searchConversations(this.value)">
+                    <span class="shortcut-hint">Ctrl+K</span>
+                </div>
+            </div>
+            <div class="conversations-list" id="conversationsList">
+                <!-- Conversations loaded dynamically -->
+            </div>
+            <div class="sidebar-actions">
+                <button class="sidebar-btn" onclick="openSettings()" title="Settings (Ctrl+,)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    Settings
+                </button>
+                <button class="sidebar-btn" onclick="toggleTheme()" title="Toggle Dark Mode (Ctrl+L)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <span id="themeText">Dark</span>
+                </button>
+            </div>
+            <div class="sidebar-footer">
+                <div class="footer-left">
+                    <span id="connectionStatus" class="status-dot" title="Ollama Connection">●</span>
+                    Local Claude
+                </div>
+                <button class="help-btn" onclick="openShortcutsModal()" title="Keyboard Shortcuts (?)")>?</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Mobile Header -->
+            <div class="mobile-header">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <span class="mobile-title">Claude Chat</span>
+                <button class="menu-toggle" onclick="openSettings()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Chat Header -->
+            <header class="chat-header">
+                <div class="chat-title" id="chatTitle">New Chat</div>
+                <div class="model-selector">
+                    <label for="model">Model:</label>
+                    <select class="model-select" id="modelSelect">
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+            </header>
+
+            <!-- Messages -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-logo">🧠</div>
+                    <h2>Welcome to Claude Chat</h2>
+                    <p>Start a new conversation or select an existing one from the sidebar.</p>
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="createNewChat()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"></path>
+                            </svg>
+                            New Chat
+                        </button>
+                        <button class="quick-btn" onclick="openShortcutsModal()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            Shortcuts
+                        </button>
+                    </div>
+                    <p class="hint-text">Press <kbd>?</kbd> for keyboard shortcuts</p>
+                </div>
+                <div class="messages-list" id="messagesList" style="display: none;"></div>
+            </div>
+
+            <!-- Input -->
+            <div class="input-container" id="inputContainer" style="display: none;">
+                <div class="input-wrapper">
+                    <div class="input-box">
+                        <textarea
+                            class="input-textarea"
+                            id="messageInput"
+                            placeholder="Message Claude..."
+                            rows="1"
+                            onkeydown="handleKeydown(event)"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                        <div class="input-toolbar">
+                            <div class="toolbar-left">
+                                <button class="toolbar-btn" onclick="clearInput()" title="Clear (Esc)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="toolbar-right">
+                                <span class="char-count" id="charCount">0 chars</span>
+                                <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send (Enter)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-hint">Press <kbd>Enter</kbd> to send, <kbd>Shift</kbd>+<kbd>Enter</kbd> for new line · <kbd>?</kbd> for shortcuts</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="modal-overlay" id="contextMenu" style="display: none;" onclick="closeContextMenu(event)">
+        <div class="modal">
+            <h3>Edit Conversation</h3>
+            <input type="text" class="modal-input" id="editTitleInput" placeholder="Conversation title">
+            <div class="modal-actions"
+            >
+                <button class="btn-secondary" onclick="closeContextMenu()">Cancel</button>
+                <button class="btn-danger" onclick="deleteCurrentConversation()">Delete</button>
+                <button class="btn-primary" onclick="saveTitle()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal" style="display: none;" onclick="closeSettingsModal(event)">
+        <div class="modal" style="min-width: 450px; max-width: 600px;">
+            <h3>Settings</h3>
+
+            <!-- Appearance Section -->
+            <div class="settings-section">
+                <h4>Appearance</h4>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Dark Mode</span>
+                        <span class="setting-description">Toggle between dark and light themes</span>
+                    </div>
+                    <div class="toggle-switch active" id="darkModeToggle" onclick="toggleDarkMode()"></div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Font Size</span>
+                        <span class="setting-description">Adjust the text size</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <input type="range" class="setting-slider" id="fontSizeSlider" min="12" max="20" value="15" oninput="updateFontSize(this.value)">
+                        <span class="slider-value" id="fontSizeValue">15px</span>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Message Spacing</span>
+                        <span class="setting-description">Space between messages</span>
+                    </div>
+                    <select class="setting-select" id="spacingSelect" onchange="updateSpacing(this.value)">
+                        <option value="compact">Compact</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="spacious">Spacious</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Show Timestamps</span>
+                        <span class="setting-description">Display message timestamps</span>
+                    </div>
+                    <div class="toggle-switch active" id="showTimestampsToggle" onclick="toggleSetting('showTimestamps')"></div>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div class="settings-section">
+                <h4>Profile</h4>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Your Name</span>
+                        <span class="setting-description">Display name for your messages</span>
+                    </div>
+                    <input type="text" class="setting-input" id="userNameInput" placeholder="You" onchange="updateUserName(this.value)">
+                </div>
+            </div>
+
+            <!-- Behavior Section -->
+            <div class="settings-section">
+                <h4>Behavior</h4>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Auto-scroll</span>
+                        <span class="setting-description">Automatically scroll to new messages</span>
+                    </div>
+                    <div class="toggle-switch active" id="autoScrollToggle" onclick="toggleSetting('autoScroll')"></div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Enter to Send</span>
+                        <span class="setting-description">Press Enter key to send messages</span>
+                    </div>
+                    <div class="toggle-switch active" id="enterToSendToggle" onclick="toggleSetting('enterToSend')"></div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Code Highlighting</span>
+                        <span class="setting-description">Syntax highlighting for code blocks</span>
+                    </div>
+                    <div class="toggle-switch active" id="codeHighlightToggle" onclick="toggleSetting('codeHighlight')"></div>
+                </div>
+            </div>
+
+            <!-- Advanced Section -->
+            <div class="settings-section">
+                <h4>Advanced</h4>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Ollama URL</span>
+                        <span class="setting-description">Custom Ollama server URL</span>
+                    </div>
+                    <input type="text" class="setting-input" id="ollamaUrlInput" placeholder="http://localhost:11434" onchange="updateOllamaUrl(this.value)">
+                </div>
+            </div>
+
+            <!-- Data Section -->
+            <div class="settings-section">
+                <h4>Data</h4>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Export Conversations</span>
+                        <span class="setting-description">Download all conversations as JSON</span>
+                    </div>
+                    <button class="btn-secondary" onclick="exportConversations()">Export</button>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Import Conversations</span>
+                        <span class="setting-description">Import conversations from JSON</span>
+                    </div>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importConversations(this)">
+                    <button class="btn-secondary" onclick="document.getElementById('importFile').click()">Import</button>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="setting-title">Clear All Data</span>
+                        <span class="setting-description">Delete all conversations permanently</span>
+                    </div>
+                    <button class="btn-danger" onclick="clearAllData()">Clear All</button>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                <span class="setting-description" style="flex: 1;">Settings auto-save to browser</span>
+                <button class="btn-primary" onclick="closeSettings()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Settings object
+        const defaultSettings = {
+            darkMode: true,
+            fontSize: 15,
+            spacing: 'normal',
+            autoScroll: true,
+            enterToSend: true,
+            codeHighlight: true,
+            showTimestamps: true,
+            userName: '',
+            ollamaUrl: ''
+        };
+
+        let settings = { ...defaultSettings };
+
+        // Initialize
+        let currentConversationId = null;
+        let conversations = [];
+        let models = [];
+        let editingConversationId = null;
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const saved = localStorage.getItem('claudeChatSettings');
+            if (saved) {
+                try {
+                    settings = { ...defaultSettings, ...JSON.parse(saved) };
+                } catch (e) {
+                    console.error('Failed to load settings:', e);
+                }
+            }
+            applySettings();
+        }
+
+        // Save settings to localStorage
+        function saveSettings() {
+            localStorage.setItem('claudeChatSettings', JSON.stringify(settings));
+        }
+
+        // Apply all settings
+        function applySettings() {
+            // Dark mode
+            if (settings.darkMode) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.getElementById('hljs-light').disabled = true;
+                document.getElementById('hljs-dark').disabled = false;
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                document.getElementById('hljs-light').disabled = false;
+                document.getElementById('hljs-dark').disabled = true;
+            }
+            document.getElementById('themeText').textContent = settings.darkMode ? 'Dark' : 'Light';
+
+            // Font size
+            document.documentElement.style.setProperty('--base-font-size', settings.fontSize + 'px');
+            document.querySelectorAll('.message-content, .input-textarea').forEach(el => {
+                el.style.fontSize = settings.fontSize + 'px';
+            });
+
+            // Spacing
+            const spacingValues = { compact: '16px', normal: '24px', spacious: '32px' };
+            document.querySelectorAll('.message').forEach(el => {
+                el.style.marginBottom = spacingValues[settings.spacing] || '24px';
+            });
+
+            // Toggle switches UI
+            updateToggleUI('darkModeToggle', settings.darkMode);
+            updateToggleUI('autoScrollToggle', settings.autoScroll);
+            updateToggleUI('enterToSendToggle', settings.enterToSend);
+            updateToggleUI('codeHighlightToggle', settings.codeHighlight);
+            updateToggleUI('showTimestampsToggle', settings.showTimestamps);
+
+            // Update inputs
+            document.getElementById('fontSizeSlider').value = settings.fontSize;
+            document.getElementById('fontSizeValue').textContent = settings.fontSize + 'px';
+            document.getElementById('spacingSelect').value = settings.spacing;
+            document.getElementById('userNameInput').value = settings.userName || '';
+            document.getElementById('ollamaUrlInput').value = settings.ollamaUrl || '';
+
+            // Refresh messages if timestamps changed
+            if (currentConversationId) {
+                loadMessages(currentConversationId);
+            }
+        }
+
+        function updateToggleUI(id, active) {
+            const toggle = document.getElementById(id);
+            if (toggle) {
+                toggle.classList.toggle('active', active);
+            }
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Copy to clipboard
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('Copied to clipboard!', 'success');
+            } catch (err) {
+                showToast('Failed to copy', 'error');
+            }
+        }
+
+        // Toggle dark mode
+        function toggleDarkMode() {
+            settings.darkMode = !settings.darkMode;
+            saveSettings();
+            applySettings();
+        }
+
+        // Quick theme toggle
+        function toggleTheme() {
+            toggleDarkMode();
+        }
+
+        // Update font size
+        function updateFontSize(value) {
+            settings.fontSize = parseInt(value);
+            document.getElementById('fontSizeValue').textContent = value + 'px';
+            saveSettings();
+            applySettings();
+        }
+
+        // Update spacing
+        function updateSpacing(value) {
+            settings.spacing = value;
+            saveSettings();
+            applySettings();
+        }
+
+        // Update user name
+        function updateUserName(value) {
+            settings.userName = value.trim();
+            saveSettings();
+            showToast('Name saved!', 'success');
+        }
+
+        // Update Ollama URL
+        function updateOllamaUrl(value) {
+            settings.ollamaUrl = value.trim();
+            saveSettings();
+            showToast('Ollama URL saved! Restart server to apply.', 'success');
+        }
+
+        // Get user initial
+        function getUserInitial() {
+            return settings.userName ? settings.userName.charAt(0).toUpperCase() : 'Y';
+        }
+
+        // Toggle setting
+        function toggleSetting(key) {
+            settings[key] = !settings[key];
+            saveSettings();
+            applySettings();
+        }
+
+        // Open/close settings
+        function openSettings() {
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function closeSettingsModal(event) {
+            if (!event || event.target === document.getElementById('settingsModal')) {
+                closeSettings();
+            }
+        }
+
+        // Shortcuts modal
+        function openShortcutsModal() {
+            document.getElementById('shortcutsModal').style.display = 'flex';
+        }
+
+        function closeShortcutsModal(event) {
+            if (!event || event.target === document.getElementById('shortcutsModal')) {
+                document.getElementById('shortcutsModal').style.display = 'none';
+            }
+        }
+
+        // Search conversations
+        async function searchConversations(query) {
+            try {
+                const response = await fetch(`/api/conversations?search=${encodeURIComponent(query)}`);
+                conversations = await response.json();
+                renderConversations();
+            } catch (error) {
+                console.error('Search failed:', error);
+            }
+        }
+
+        // Toggle sidebar on mobile
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.querySelector('.menu-toggle');
+            if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+                if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                    sidebar.classList.remove('open');
+                }
+            }
+        });
+
+        // Load models
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                models = data;
+                const select = document.getElementById('modelSelect');
+
+                if (models.length === 0) {
+                    select.innerHTML = '<option value="">No models - run: ollama pull llama3.2</option>';
+                    return;
+                }
+
+                select.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
+            } catch (error) {
+                document.getElementById('modelSelect').innerHTML = '<option value="">Cannot connect to Ollama</option>';
+            }
+        }
+
+        // Check connection
+        async function checkConnection() {
+            try {
+                const response = await fetch('/api/health');
+                const status = document.getElementById('connectionStatus');
+                if (response.ok) {
+                    status.className = 'status-dot connected';
+                    status.title = 'Connected to Ollama';
+                } else {
+                    status.className = 'status-dot disconnected';
+                    status.title = 'Disconnected from Ollama';
+                }
+            } catch {
+                const status = document.getElementById('connectionStatus');
+                status.className = 'status-dot disconnected';
+                status.title = 'Disconnected from Ollama';
+            }
+        }
+
+        // Load conversations
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/conversations');
+                conversations = await response.json();
+                renderConversations();
+            } catch (error) {
+                console.error('Failed to load conversations:', error);
+            }
+        }
+
+        // Render conversations
+        function renderConversations() {
+            const list = document.getElementById('conversationsList');
+
+            if (conversations.length === 0) {
+                const searchQuery = document.getElementById('searchInput').value;
+                list.innerHTML = `<div class="empty-conversations">${searchQuery ? 'No matches found' : 'No conversations yet'}</div>`;
+                return;
+            }
+
+            list.innerHTML = conversations.map(conv => `
+                <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}"
+                     onclick="selectConversation(${conv.id})"
+                     oncontextmenu="openContextMenu(event, ${conv.id})"
+                     title="${escapeHtml(conv.title)} (${conv.message_count} messages)"
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <div class="conversation-info">
+                        <span class="conversation-title">${escapeHtml(conv.title)}</span>
+                        <span class="conversation-meta">${conv.message_count} msgs · ${formatDate(conv.updated_at)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            if (days === 0) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else if (days === 1) {
+                return 'Yesterday';
+            } else if (days < 7) {
+                return date.toLocaleDateString([], { weekday: 'short' });
+            } else {
+                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+        }
+
+        // Create new chat
+        async function createNewChat() {
+            try {
+                const response = await fetch('/api/conversations', { method: 'POST' });
+                const conv = await response.json();
+                conversations.unshift(conv);
+                currentConversationId = conv.id;
+                renderConversations();
+                showChat(conv.title);
+                showToast('New chat created!', 'success');
+
+                // Close sidebar on mobile
+                if (window.innerWidth <= 768) {
+                    document.getElementById('sidebar').classList.remove('open');
+                }
+            } catch (error) {
+                showToast('Failed to create chat', 'error');
+            }
+        }
+
+        // Select conversation
+        async function selectConversation(id) {
+            currentConversationId = id;
+            const conv = conversations.find(c => c.id === id);
+            renderConversations();
+
+            if (conv) {
+                showChat(conv.title);
+                await loadMessages(id);
+            }
+
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        }
+
+        // Show chat
+        function showChat(title) {
+            document.getElementById('chatTitle').textContent = title || 'New Chat';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('messagesList').style.display = 'block';
+            document.getElementById('inputContainer').style.display = 'block';
+            document.getElementById('messagesList').innerHTML = '';
+        }
+
+        // Load messages
+        async function loadMessages(convId) {
+            try {
+                const response = await fetch(`/api/conversations/${convId}/messages`);
+                const messages = await response.json();
+
+                const list = document.getElementById('messagesList');
+                list.innerHTML = '';
+
+                messages.forEach(msg => {
+                    addMessageToUI(msg.role, msg.content, msg.created_at, false);
+                });
+
+                scrollToBottom();
+            } catch (error) {
+                console.error('Failed to load messages:', error);
+            }
+        }
+
+        // Add message to UI
+        function addMessageToUI(role, content, timestamp, animate = true) {
+            const list = document.getElementById('messagesList');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            if (animate) messageDiv.style.animation = 'fadeIn 0.3s ease';
+
+            const avatar = role === 'user' ? getUserInitial() : 'C';
+            const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+            let contentHtml;
+            if (role === 'assistant' && settings.codeHighlight) {
+                contentHtml = marked.parse(content);
+            } else {
+                contentHtml = escapeHtml(content).replace(/\n/g, '<br>');
+            }
+
+            const timestampHtml = settings.showTimestamps && timeStr ?
+                `<span class="message-timestamp" title="${new Date(timestamp).toLocaleString()}">${timeStr}</span>` : '';
+
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content-wrapper">
+                    <div class="message-header-row">
+                        <span class="message-role">${role === 'user' ? (settings.userName || 'You') : 'Claude'}</span>
+                        ${timestampHtml}
+                    </div>
+                    <div class="message-content">${contentHtml}</div>
+                    ${role === 'assistant' ? `
+                        <div class="message-actions">
+                            <button class="msg-action-btn" onclick="copyToClipboard('${escapeJsString(content)}')" title="Copy">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                Copy
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            list.appendChild(messageDiv);
+
+            if (role === 'assistant' && settings.codeHighlight) {
+                messageDiv.querySelectorAll('pre code').forEach(block => {
+                    hljs.highlightElement(block);
+                });
+            }
+
+            const contentEl = messageDiv.querySelector('.message-content');
+            if (contentEl) {
+                contentEl.style.fontSize = settings.fontSize + 'px';
+            }
+
+            scrollToBottom();
+        }
+
+        // Escape string for JS
+        function escapeJsString(str) {
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        }
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const content = input.value.trim();
+            const model = document.getElementById('modelSelect').value;
+
+            if (!content) return;
+            if (!currentConversationId) {
+                showToast('Create a new chat first!', 'warning');
+                return;
+            }
+            if (!model) {
+                showToast('Select a model first!', 'warning');
+                return;
+            }
+
+            input.value = '';
+            autoResize(input);
+            sendBtn.disabled = true;
+            updateCharCount();
+
+            addMessageToUI('user', content, new Date().toISOString());
+
+            showTyping();
+
+            try {
+                const response = await fetch(`/api/conversations/${currentConversationId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: 'user', content, model })
+                });
+
+                hideTyping();
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to get response');
+                }
+
+                const data = await response.json();
+                addMessageToUI('assistant', data.content, new Date().toISOString());
+                loadConversations();
+
+            } catch (error) {
+                hideTyping();
+                addMessageToUI('assistant', `**Error:** ${escapeHtml(error.message)}`, new Date().toISOString());
+            }
+
+            sendBtn.disabled = false;
+        }
+
+        // Typing indicator
+        function showTyping() {
+            const list = document.getElementById('messagesList');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message assistant typing';
+            typingDiv.id = 'typing';
+            typingDiv.innerHTML = `
+                <div class="message-avatar">C</div>
+                <div class="message-content-wrapper">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+            list.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function hideTyping() {
+            const typing = document.getElementById('typing');
+            if (typing) typing.remove();
+        }
+
+        // Context menu
+        function openContextMenu(event, convId) {
+            event.preventDefault();
+            event.stopPropagation();
+            editingConversationId = convId;
+            const conv = conversations.find(c => c.id === convId);
+            document.getElementById('editTitleInput').value = conv?.title || '';
+            document.getElementById('contextMenu').style.display = 'flex';
+        }
+
+        function closeContextMenu(event) {
+            if (!event || event.target === document.getElementById('contextMenu')) {
+                document.getElementById('contextMenu').style.display = 'none';
+                editingConversationId = null;
+            }
+        }
+
+        async function saveTitle() {
+            if (!editingConversationId) return;
+            const newTitle = document.getElementById('editTitleInput').value.trim();
+            if (!newTitle) return;
+
+            try {
+                await fetch(`/api/conversations/${editingConversationId}/title`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newTitle })
+                });
+
+                const conv = conversations.find(c => c.id === editingConversationId);
+                if (conv) conv.title = newTitle;
+
+                if (currentConversationId === editingConversationId) {
+                    document.getElementById('chatTitle').textContent = newTitle;
+                }
+
+                renderConversations();
+                closeContextMenu();
+                showToast('Title updated!', 'success');
+            } catch (error) {
+                showToast('Failed to update title', 'error');
+            }
+        }
+
+        async function deleteCurrentConversation() {
+            if (!editingConversationId) return;
+
+            try {
+                await fetch(`/api/conversations/${editingConversationId}`, { method: 'DELETE' });
+                conversations = conversations.filter(c => c.id !== editingConversationId);
+
+                if (currentConversationId === editingConversationId) {
+                    currentConversationId = null;
+                    document.getElementById('emptyState').style.display = 'flex';
+                    document.getElementById('messagesList').style.display = 'none';
+                    document.getElementById('inputContainer').style.display = 'none';
+                    document.getElementById('chatTitle').textContent = 'New Chat';
+                }
+
+                renderConversations();
+                closeContextMenu();
+                showToast('Conversation deleted', 'success');
+            } catch (error) {
+                showToast('Failed to delete', 'error');
+            }
+        }
+
+        // Export conversations
+        async function exportConversations() {
+            try {
+                const response = await fetch('/api/conversations');
+                const conversations = await response.json();
+
+                const exportData = [];
+                for (const conv of conversations) {
+                    const msgResponse = await fetch(`/api/conversations/${conv.id}/messages`);
+                    const messages = await msgResponse.json();
+                    exportData.push({ ...conv, messages });
+                }
+
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `claude-chat-export-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Exported successfully!', 'success');
+            } catch (error) {
+                showToast('Export failed', 'error');
+            }
+        }
+
+        // Import conversations
+        async function importConversations(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+
+                if (!Array.isArray(data)) {
+                    throw new Error('Invalid file format');
+                }
+
+                // Import each conversation
+                for (const conv of data) {
+                    const response = await fetch('/api/conversations', { method: 'POST' });
+                    const newConv = await response.json();
+
+                    // Update title
+                    await fetch(`/api/conversations/${newConv.id}/title`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: conv.title || 'Imported Chat' })
+                    });
+
+                    // Import messages
+                    if (conv.messages) {
+                        for (const msg of conv.messages) {
+                            await fetch(`/api/conversations/${newConv.id}/messages`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    role: msg.role,
+                                    content: msg.content,
+                                    model: msg.model || 'llama3.2'
+                                })
+                            });
+                        }
+                    }
+                }
+
+                loadConversations();
+                showToast(`Imported ${data.length} conversations!`, 'success');
+            } catch (error) {
+                showToast('Import failed: ' + error.message, 'error');
+            }
+
+            input.value = '';
+        }
+
+        // Clear all data
+        async function clearAllData() {
+            if (!confirm('⚠️ Are you sure? This will delete ALL conversations permanently.')) return;
+
+            try {
+                const response = await fetch('/api/conversations');
+                const conversations = await response.json();
+
+                for (const conv of conversations) {
+                    await fetch(`/api/conversations/${conv.id}`, { method: 'DELETE' });
+                }
+
+                currentConversationId = null;
+                loadConversations();
+                document.getElementById('emptyState').style.display = 'flex';
+                document.getElementById('messagesList').style.display = 'none';
+                document.getElementById('inputContainer').style.display = 'none';
+                document.getElementById('chatTitle').textContent = 'New Chat';
+
+                closeSettings();
+                showToast('All data cleared!', 'success');
+            } catch (error) {
+                showToast('Failed to clear data', 'error');
+            }
+        }
+
+        // Utilities
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 400) + 'px';
+            updateCharCount();
+        }
+
+        function updateCharCount() {
+            const input = document.getElementById('messageInput');
+            const count = input.value.length;
+            document.getElementById('charCount').textContent = count + ' chars';
+        }
+
+        function clearInput() {
+            document.getElementById('messageInput').value = '';
+            autoResize(document.getElementById('messageInput'));
+        }
+
+        function handleKeydown(e) {
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                closeSettings();
+                closeContextMenu();
+                closeShortcutsModal();
+                return;
+            }
+
+            // ? to show shortcuts
+            if (e.key === '?' && !e.ctrlKey && !e.altKey && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault();
+                openShortcutsModal();
+                return;
+            }
+
+            // Ctrl+K for search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+                return;
+            }
+
+            // Ctrl+N for new chat
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                createNewChat();
+                return;
+            }
+
+            // Ctrl+, for settings
+            if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+                e.preventDefault();
+                openSettings();
+                return;
+            }
+
+            // Ctrl+L for theme toggle
+            if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                e.preventDefault();
+                toggleTheme();
+                return;
+            }
+
+            // Enter to send
+            if (settings.enterToSend && e.key === 'Enter' && !e.shiftKey) {
+                if (document.activeElement === document.getElementById('messageInput')) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            }
+        }
+
+        function scrollToBottom() {
+            if (!settings.autoScroll) return;
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            loadModels();
+            loadConversations();
+            checkConnection();
+            setInterval(checkConnection, 30000); // Check every 30 seconds
+        });
+
+        // Global keyboard listener
+        document.addEventListener('keydown', handleKeydown);
+    </script>
+</body>
+</html>

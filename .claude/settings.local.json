@@ -1,0 +1,8 @@
+{
+  "model": "kimi-k2.5:cloud",
+  "permissions": {
+    "allow": [
+      "Skill(update-config)"
+    ]
+  }
+}
